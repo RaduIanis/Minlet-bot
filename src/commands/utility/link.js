@@ -16,10 +16,8 @@ module.exports = {
     if (msgId) {
       try {
         const msg = await ch.messages.fetch(msgId);
-        const existing = msg.components[0]?.components || [];
-        const allButtons = [...existing.map(c => ButtonBuilder.from(c)), ...buttons];
-        if (allButtons.length > 5) return interaction.reply({ embeds: [new EmbedBuilder().setDescription('Max 5 buttons per row.').setColor(config.errorColor)], flags: 64 });
-        await msg.edit({ components: [new ActionRowBuilder().addComponents(allButtons)] });
+        if (buttons.length > 5) return interaction.reply({ embeds: [new EmbedBuilder().setDescription('Max 5 buttons per row.').setColor(config.errorColor)], flags: 64 });
+        await msg.edit({ components: [new ActionRowBuilder().addComponents(buttons)] });
         interaction.reply({ embeds: [new EmbedBuilder().setDescription(`Links added to [message](https://discord.com/channels/${interaction.guild.id}/${ch.id}/${msgId}).`).setColor(config.successColor)], flags: 64 });
       } catch { return interaction.reply({ embeds: [new EmbedBuilder().setDescription('Message not found.').setColor(config.errorColor)], flags: 64 }); }
     } else {
