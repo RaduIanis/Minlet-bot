@@ -1,0 +1,13 @@
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const db = require('../../database/schema');
+const config = require('../../config');
+module.exports = {
+  data: new SlashCommandBuilder().setName('tag').setDescription('Tags').addSubcommand(s => s.setName('create').setDescription('Create a tag').addStringOption(o => o.setName('name').setDescription('Tag name').setRequired(true)).addStringOption(o => o.setName('content').setDescription('Tag content').setRequired(true))).addSubcommand(s => s.setName('delete').setDescription('Delete a tag').addStringOption(o => o.setName('name').setDescription('Tag name').setRequired(true))).addSubcommand(s => s.setName('get').setDescription('Get a tag').addStringOption(o => o.setName('name').setDescription('Tag name').setRequired(true))).addSubcommand(s => s.setName('list').setDescription('List all tags')),
+  async execute(interaction) {
+    const sub = interaction.options.getSubcommand();
+    if (sub === 'create') { const n = interaction.options.getString('name').toLowerCase(); const c = interaction.options.getString('content'); if (db.prepare('SELECT 1 FROM tag WHERE guild_id = ? AND name = ?').get(interaction.guild.id, n)) return interaction.reply({ embeds: [new EmbedBuilder().setDescription(`Exists.`).setColor(config.errorColor)], flags: 64 }); db.prepare('INSERT INTO tag (guild_id, name, content, creator_id) VALUES (?, ?, ?, ?)').run(interaction.guild.id, n, c, interaction.user.id); interaction.reply({ embeds: [new EmbedBuilder().setDescription(`Created.`).setColor(config.successColor)] }); }
+    else if (sub === 'delete') { db.prepare('DELETE FROM tag WHERE guild_id = ? AND name = ?').run(interaction.guild.id, interaction.options.getString('name').toLowerCase()); interaction.reply({ embeds: [new EmbedBuilder().setDescription('Deleted.').setColor(config.successColor)] }); }
+    else if (sub === 'get') { const t = db.prepare('SELECT * FROM tag WHERE guild_id = ? AND name = ?').get(interaction.guild.id, interaction.options.getString('name').toLowerCase()); if (!t) return interaction.reply({ embeds: [new EmbedBuilder().setDescription('Not found.').setColor(config.errorColor)], flags: 64 }); db.prepare('UPDATE tag SET uses = uses + 1 WHERE guild_id = ? AND name = ?').run(interaction.guild.id, t.name); interaction.reply(t.content); }
+    else { const tags = db.prepare('SELECT name, uses FROM tag WHERE guild_id = ? ORDER BY uses DESC').all(interaction.guild.id); interaction.reply({ embeds: [new EmbedBuilder().setTitle('Tags').setDescription(tags.length ? tags.map(t => `\`${t.name}\` — ${t.uses} uses`).join('\n') : 'None.').setColor(config.infoColor)] }); }
+  },
+};
