@@ -23,7 +23,8 @@ db.exec(`
     anti_mass_mention INTEGER DEFAULT 0,
     max_links_per_msg INTEGER DEFAULT 3,
     max_mentions_per_msg INTEGER DEFAULT 5,
-    reaction_roles TEXT DEFAULT '[]'
+    reaction_roles TEXT DEFAULT '[]',
+    suggestion_channel TEXT
   );
   CREATE TABLE IF NOT EXISTS warnings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,6 +146,16 @@ db.exec(`
     channel_id TEXT NOT NULL,
     content TEXT NOT NULL,
     remind_at TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    upvotes TEXT DEFAULT '[]',
+    downvotes TEXT DEFAULT '[]',
     created_at TEXT DEFAULT (datetime('now'))
   );
 `);

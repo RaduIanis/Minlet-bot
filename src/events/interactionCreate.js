@@ -1,4 +1,4 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../database/schema');
 const config = require('../config');
 module.exports = {
@@ -19,8 +19,30 @@ module.exports = {
         if (id === 'ticket_close') return await require('../systems/ticketClose').execute(interaction, client);
         if (id === 'ticket_claim') return await require('../systems/ticketClaim').execute(interaction, client);
         if (id === 'ticket_transcript') return await require('../systems/ticketTranscript').execute(interaction, client);
-        if (id === 'giveaway_enter') return await interaction.reply({ embeds: [new EmbedBuilder().setDescription('React with 🎉 to enter!').setColor(config.infoColor)], flags: 64 });
+        if (id === 'giveaway_enter') return await interaction.reply({ embeds: [new EmbedBuilder().setDescription('React with \u{1f389} to enter!').setColor(config.infoColor)], flags: 64 });
         if (id === 'reactionrole_select') return await require('../systems/reactionRole').execute(interaction, client);
+        if (id === 'suggestion_up' || id === 'suggestion_down') {
+          const s = db.prepare('SELECT * FROM suggestions WHERE message_id = ? AND guild_id = ?').get(interaction.message.id, interaction.guild.id);
+          if (!s) return interaction.reply({ embeds: [new EmbedBuilder().setDescription('Suggestion not found.').setColor(config.errorColor)], flags: 64 });
+          const up = JSON.parse(s.upvotes || '[]');
+          const down = JSON.parse(s.downvotes || '[]');
+          const userId = interaction.user.id;
+          if (id === 'suggestion_up') {
+            if (up.includes(userId)) { up.splice(up.indexOf(userId), 1); }
+            else { up.push(userId); down.splice(down.indexOf(userId), 1); }
+          } else {
+            if (down.includes(userId)) { down.splice(down.indexOf(userId), 1); }
+            else { down.push(userId); up.splice(up.indexOf(userId), 1); }
+          }
+          db.prepare('UPDATE suggestions SET upvotes = ?, downvotes = ? WHERE message_id = ? AND guild_id = ?').run(JSON.stringify(up), JSON.stringify(down), interaction.message.id, interaction.guild.id);
+          const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('suggestion_up').setLabel(String(up.length)).setEmoji('\u{1f44d}').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('suggestion_down').setLabel(String(down.length)).setEmoji('\u{1f44e}').setStyle(ButtonStyle.Danger),
+          );
+          await interaction.message.edit({ components: [row] });
+          await interaction.deferUpdate();
+          return;
+        }
       } catch (e) { console.error(`Button ${id}:`, e); const r = { embeds: [new EmbedBuilder().setDescription('Error.').setColor(config.errorColor)], flags: 64 }; if (interaction.replied || interaction.deferred) await interaction.followUp(r).catch(()=>{}); else await interaction.reply(r).catch(()=>{}); }
       return;
     }
